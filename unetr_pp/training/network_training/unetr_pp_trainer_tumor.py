@@ -35,6 +35,22 @@ from torch.cuda.amp import autocast
 from unetr_pp.training.learning_rate.poly_lr import poly_lr
 from batchgenerators.utilities.file_and_folder_operations import *
 from fvcore.nn import FlopCountAnalysis
+import shutil
+
+
+def copy_from_Tr_to_Ts_or_Val(val_keys, set_train_folder_img, set_train_folder_label,set_test_folder_img, set_test_folder_label, modalities=4):
+    os.makedirs(set_test_folder_img, exist_ok=True)
+    os.makedirs(set_test_folder_label, exist_ok=True)
+
+    for case_id in val_keys:  # ~ volume
+        for mod in range(modalities):  # ~ images(4-modalities)
+            src_img = join(set_train_folder_img, f"{case_id}_000{mod}.nii.gz")
+            dst_img = join(set_test_folder_img, f"{case_id}_000{mod}.nii.gz")
+            shutil.copy(src_img, dst_img)
+
+        src_label = join(set_train_folder_label, f"{case_id}.nii.gz")  # ~labels
+        dst_label = join(set_test_folder_label, f"{case_id}.nii.gz")
+        shutil.copy(src_label, dst_label)
 
 
 class unetr_pp_trainer_tumor(Trainer_tumor):
@@ -46,12 +62,12 @@ class unetr_pp_trainer_tumor(Trainer_tumor):
                  unpack_data=True, deterministic=True, fp16=False):
         super().__init__(plans_file, fold, output_folder, dataset_directory, batch_dice, stage, unpack_data,
                          deterministic, fp16)
-        self.max_num_epochs = 1000
+        self.max_num_epochs = 250 # 500 # 1000
         self.initial_lr = 1e-2
         self.deep_supervision_scales = None
         self.ds_loss_weights = None
         self.pin_memory = True
-        self.load_pretrain_weight = False
+        self.load_pretrain_weight = True
 
         self.load_plans_file()
         
@@ -108,7 +124,7 @@ class unetr_pp_trainer_tumor(Trainer_tumor):
                 # mask = np.array([True] + [True if i < net_numpool - 1 else False for i in range(1, net_numpool)])
                 # weights[~mask] = 0
                 weights = weights / weights.sum()
-                print(weights)
+                # print(weights) # JJ
                 self.ds_loss_weights = weights
                 # now wrap the loss
                 self.loss = MultipleOutputLoss2(self.loss, self.ds_loss_weights)
@@ -177,6 +193,22 @@ class unetr_pp_trainer_tumor(Trainer_tumor):
                              )
         #print("self.input_channels", self.input_channels)
         #print("self.num_classes", self.num_classes)
+        print(self.load_pretrain_weight)
+        # if self.load_pretrain_weight:
+        #     # checkpoint = torch.load("./pretrained/tumor_pretrain.model", map_location='cpu')
+        #     checkpoint = torch.load(
+        #         "./benchmark_MSD/unetr_pp/2d/Task003_tumor/unetr_pp_trainer_tumor__unetr_pp_Plansv2.1/fold_0/model_final_checkpoint.model",
+        #         map_location='cpu')
+        #     ck = {}
+        #
+        #     for i in self.network.state_dict():
+        #         if i in checkpoint:
+        #             ck.update({i: checkpoint[i]})
+        #         else:
+        #             ck.update({i: self.network.state_dict()[i]})
+        #     self.network.load_state_dict(ck)
+        #     print('I am using the pre_train weight!!')
+
         if torch.cuda.is_available():
             self.network.cuda()
         self.network.inference_apply_nonlin = softmax_helper
@@ -439,9 +471,12 @@ class unetr_pp_trainer_tumor(Trainer_tumor):
        'BRATS_361', 'BRATS_382', 'BRATS_397'])
             if self.fold < len(splits):
                 tr_keys = splits[self.fold]['train']
-                val_keys = splits[self.fold]['val']
-                self.print_to_log_file("This split has %d training and %d validation cases."
-                                       % (len(tr_keys), len(val_keys)))
+                ts_keys = splits[self.fold]['val']
+                ## resplit
+                val_keys, tr_keys = tr_keys[:int(len(tr_keys)*0.1)], tr_keys[int(len(tr_keys)*0.1):]
+                self.print_to_log_file(f"resplit tr:val:ts={len(tr_keys)}:{len(val_keys)}:{len(ts_keys)}")
+                # self.print_to_log_file("This split has %d training and %d validation cases."
+                #                        % (len(tr_keys), len(val_keys)))
             else:
                 self.print_to_log_file("INFO: You requested fold %d for training but splits "
                                        "contain only %d folds. I am now creating a "
@@ -456,8 +491,28 @@ class unetr_pp_trainer_tumor(Trainer_tumor):
                 self.print_to_log_file("This random 80:20 split has %d training and %d validation cases."
                                        % (len(tr_keys), len(val_keys)))
 
+        raw_root = join(os.environ.get("unetr_pp_raw_data_base"),"nnFormer_raw_data/Task003_tumor")
+
+        # copying
+        self.print_to_log_file("Copy 1 fold into Ts ...")
+
+        set_train_folder_img = join(raw_root, "imagesTr") # images
+        set_val_ece_folder_img = join(raw_root, "imagesVal_ece", "fold_" + str(self.fold))
+        set_test_folder_img = join(raw_root, "imagesTs", "fold_" + str(self.fold))
+        set_train_folder_label = join(raw_root, "labelsTr") # labels
+        set_val_ece_folder_label = join(raw_root, "labelsVal_ece", "fold_" + str(self.fold))
+        set_test_folder_label = join(raw_root, "labelsTs", "fold_" + str(self.fold))
+
+
+        if not os.path.exists(set_val_ece_folder_img): # JJ
+            copy_from_Tr_to_Ts_or_Val(val_keys, set_train_folder_img, set_train_folder_label, set_test_folder_img,
+                                      set_test_folder_label, modalities=4)
+            copy_from_Tr_to_Ts_or_Val(ts_keys, set_train_folder_img, set_train_folder_label, set_val_ece_folder_img,
+                                      set_val_ece_folder_label, modalities=4)
+        # import pdb;pdb.set_trace()
         tr_keys.sort()
         val_keys.sort()
+        ts_keys.sort()
         self.dataset_tr = OrderedDict()
         for i in tr_keys:
             self.dataset_tr[i] = self.dataset[i]

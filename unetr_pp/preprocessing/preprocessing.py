@@ -307,6 +307,7 @@ class GenericPreprocessor(object):
 
     def preprocess_test_case(self, data_files, target_spacing, seg_file=None, force_separate_z=None):
         data, seg, properties = ImageCropper.crop_from_list_of_files(data_files, seg_file)
+        # data, seg, properties = ImageCropper.crop_from_list_of_files_no_crop(data_files, seg_file) # JJ: no_crop
 
         data = data.transpose((0, *[i + 1 for i in self.transpose_forward]))
         seg = seg.transpose((0, *[i + 1 for i in self.transpose_forward]))

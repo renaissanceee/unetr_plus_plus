@@ -116,6 +116,30 @@ def crop_to_nonzero(data, seg=None, nonzero_label=-1):
     return data, seg, bbox
 
 
+def crop_to_nonzero_no_crop(data, seg=None, nonzero_label=-1):
+    """
+    Same input/output format as crop_to_nonzero,
+    but without actual cropping.
+    """
+    nonzero_mask = np.ones_like(data[0], dtype=bool)
+
+    # bbox is the whole
+    bbox = [[0, s] for s in data.shape[1:]]
+
+    data = data.copy()
+
+    if seg is not None:
+        seg = seg.copy()
+    else:
+        nonzero_mask = nonzero_mask.astype(int)
+        nonzero_mask[nonzero_mask == 0] = nonzero_label
+        nonzero_mask[nonzero_mask > 0] = 0
+        seg = nonzero_mask[None]
+    if seg is not None:
+        seg[(seg == 0) & (nonzero_mask == 0)] = nonzero_label
+
+    return data, seg, bbox
+
 def get_patient_identifiers_from_cropped_files(folder):
     return [i.split("/")[-1][:-4] for i in subfiles(folder, join=True, suffix=".npz")]
 
@@ -150,9 +174,32 @@ class ImageCropper(object):
         return data, seg, properties
 
     @staticmethod
+    def crop_no_crop(data, properties, seg=None):
+        shape_before = data.shape
+        data, seg, bbox = crop_to_nonzero_no_crop(data, seg, nonzero_label=-1)
+        shape_after = data.shape
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("before crop:", shape_before, "after crop:", shape_after, "spacing:",
+              np.array(properties["original_spacing"]), "\n")
+
+        properties["crop_bbox"] = bbox
+        properties['classes'] = np.unique(seg)
+        seg[seg < -1] = 0
+        properties["size_after_cropping"] = data[0].shape
+        return data, seg, properties
+
+    @staticmethod
     def crop_from_list_of_files(data_files, seg_file=None):
         data, seg, properties = load_case_from_list_of_files(data_files, seg_file)
         return ImageCropper.crop(data, properties, seg)
+
+    @staticmethod
+    def crop_from_list_of_files_no_crop(data_files, seg_file=None):
+        data, seg, properties = load_case_from_list_of_files(data_files, seg_file)
+        return ImageCropper.crop_no_crop(data, properties, seg)
 
     def load_crop_save(self, case, case_identifier, overwrite_existing=False):
         try:

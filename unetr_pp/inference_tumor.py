@@ -41,13 +41,13 @@ def process_label(label):
 def test(fold):
     #path='./'
     
-    path = None # Replace None by the full path of : unetr_plus_plus/DATASET_Tumor/unetr_pp_raw/unetr_pp_raw_data/Task03_tumor/"    
-    
+    path = "/leonardo_work/EUHPC_B26_036/jli/cali/dataset/MSD/nnFormer_raw/nnFormer_raw_data/Task003_tumor" # Replace None by the full path of : unetr_plus_plus/DATASET_Tumor/unetr_pp_raw/unetr_pp_raw_data/Task03_tumor/"
+    ## issue: no labelsTs
     label_list=sorted(glob.glob(os.path.join(path,'labelsTs','*nii.gz')))
 
-    infer_path = None # Replace None by the full path of : unetr_plus_plus/unetr_pp/evaluation/unetr_pp_tumor_checkpoint/"
+    infer_path = "benchmark_MSD/nnFormer/2d/Task003_tumor/nnFormerTrainerV2_nnformer_tumor__nnFormerPlansv2.1/fold_0" # Replace None by the full path of : unetr_plus_plus/unetr_pp/evaluation/unetr_pp_tumor_checkpoint/"
 
-    infer_list=sorted(glob.glob(os.path.join(infer_path,'inferTs','*nii.gz')))
+    infer_list=sorted(glob.glob(os.path.join(infer_path,'test','*nii.gz')))
     print("loading success...")
     Dice_et=[]
     Dice_tc=[]

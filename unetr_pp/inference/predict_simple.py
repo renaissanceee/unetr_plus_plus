@@ -12,7 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
+import sys
+sys.path.insert(0, "/leonardo_work/EUHPC_B26_036/jli/cali/unetr_plus_plus")
 import argparse
 import torch
 
@@ -108,13 +109,6 @@ def main():
     parser.add_argument("--all_in_gpu", type=str, default="None", required=False, help="can be None, False or True. "
                                                                                        "Do not touch.")
     parser.add_argument("--step_size", type=float, default=0.5, required=False, help="don't touch")
-    # parser.add_argument("--interp_order", required=False, default=3, type=int,
-    #                     help="order of interpolation for segmentations, has no effect if mode=fastest. Do not touch this.")
-    # parser.add_argument("--interp_order_z", required=False, default=0, type=int,
-    #                     help="order of interpolation along z is z is done differently. Do not touch this.")
-    # parser.add_argument("--force_separate_z", required=False, default="None", type=str,
-    #                     help="force_separate_z resampling. Can be None, True or False, has no effect if mode=fastest. "
-    #                          "Do not touch this.")
     parser.add_argument('-chk',
                         help='checkpoint name, default: model_final_checkpoint',
                         required=False,
@@ -125,12 +119,13 @@ def main():
                              'that yhis is not recommended (mixed precision is ~2x faster!)')
 
     args = parser.parse_args()
-    input_folder = args.input_folder
+    import os
+    input_folder = join(os.environ.get("nnFormer_raw_data_base"), args.input_folder)
     output_folder = args.output_folder
     part_id = args.part_id
     num_parts = args.num_parts
     folds = args.folds
-    save_npz = args.save_npz
+    save_npz = True # args.save_npz
     lowres_segmentations = args.lowres_segmentations
     num_threads_preprocessing = args.num_threads_preprocessing
     num_threads_nifti_save = args.num_threads_nifti_save

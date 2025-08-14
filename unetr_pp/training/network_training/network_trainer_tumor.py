@@ -15,7 +15,7 @@
 
 from _warnings import warn
 from typing import Tuple
-
+import os
 import matplotlib
 from batchgenerators.utilities.file_and_folder_operations import *
 from unetr_pp.network_architecture.neural_network import SegmentationNetwork
@@ -93,7 +93,7 @@ class NetworkTrainer_tumor(object):
         # too high the training will take forever
         self.train_loss_MA_alpha = 0.93  # alpha * old + (1-alpha) * new
         self.train_loss_MA_eps = 5e-4  # new MA must be at least this much better (smaller)
-        self.max_num_epochs = 1000
+        self.max_num_epochs = 1 # 500 # 1000
         self.num_batches_per_epoch = 250
         self.num_val_batches_per_epoch = 50
         self.also_val_in_tr_mode = False
@@ -166,7 +166,29 @@ class NetworkTrainer_tumor(object):
             tr_keys = val_keys = list(self.dataset.keys())
         else:
             tr_keys = splits[self.fold]['train']
-            val_keys = splits[self.fold]['val']
+            ts_keys = splits[self.fold]['val']
+            ## resplit
+            val_keys, tr_keys = tr_keys[:int(len(tr_keys) * 0.1)], tr_keys[int(len(tr_keys) * 0.1):]
+            self.print_to_log_file(f"resplit tr:val:ts={len(tr_keys)}:{len(val_keys)}:{len(ts_keys)}")
+
+
+        raw_root = join(os.environ.get("unetr_pp_raw_data_base"),"nnFormer_raw_data/Task003_tumor")
+
+        # copying
+        self.print_to_log_file("Copy 1 fold into Ts ...")
+
+        set_train_folder_img = join(raw_root, "imagesTr") # images
+        set_val_ece_folder_img = join(raw_root, "imagesVal_ece", "fold_" + str(self.fold))
+        set_test_folder_img = join(raw_root, "imagesTs", "fold_" + str(self.fold))
+        set_train_folder_label = join(raw_root, "labelsTr") # labels
+        set_val_ece_folder_label = join(raw_root, "labelsVal_ece", "fold_" + str(self.fold))
+        set_test_folder_label = join(raw_root, "labelsTs", "fold_" + str(self.fold))
+
+        if not os.path.exists(set_val_ece_folder_img): # JJ
+            copy_from_Tr_to_Ts_or_Val(val_keys, set_train_folder_img, set_train_folder_label, set_test_folder_img,
+                                      set_test_folder_label, modalities=4)
+            copy_from_Tr_to_Ts_or_Val(ts_keys, set_train_folder_img, set_train_folder_label, set_val_ece_folder_img,
+                                      set_val_ece_folder_label, modalities=4)
 
         tr_keys.sort()
         val_keys.sort()

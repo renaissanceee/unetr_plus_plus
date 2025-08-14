@@ -11,7 +11,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
+import sys
+sys.path.insert(0, "/leonardo_work/EUHPC_B26_036/jli/cali/unetr_plus_plus")
 
 import argparse
 from batchgenerators.utilities.file_and_folder_operations import *
@@ -162,9 +163,9 @@ def main():
         trainer.network.eval()
 
         # predict validation
-        trainer.validate(save_softmax=args.npz, validation_folder_name=val_folder,
-                         run_postprocessing_on_folds=not disable_postprocessing_on_folds,
-                         overwrite=args.val_disable_overwrite)
+        # trainer.validate(save_softmax=args.npz, validation_folder_name=val_folder,
+        #                  run_postprocessing_on_folds=not disable_postprocessing_on_folds,
+        #                  overwrite=args.val_disable_overwrite)
 
 
 if __name__ == "__main__":

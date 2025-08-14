@@ -52,8 +52,9 @@ def restore_model(pkl_file, checkpoint=None, train=False, fp16=None,folder=None)
     :param fp16: if None then we take no action. If True/False we overwrite what the model has in its init
     :return:
     """
-    
-    info = load_pickle(pkl_file)
+
+    info = load_pickle(pkl_file.replace('.model', ''))
+    # info = load_pickle(pkl_file)
     init = info['init']
     name = info['name']
     '''

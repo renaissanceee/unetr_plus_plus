@@ -42,9 +42,11 @@ def get_default_configuration(network, task, network_trainer, plans_identifier=d
     dataset_directory = join(preprocessing_output_dir, task)
 
     if network == '2d':
-        plans_file = join(preprocessing_output_dir, task, plans_identifier + "_plans_2D.pkl")
+        # plans_file = join(preprocessing_output_dir, task, plans_identifier + "_plans_2D.pkl")
+        plans_file = join(preprocessing_output_dir, task, "nnFormerPlansv2.1" + "_plans_2D.pkl")
     else:
-        plans_file = join(preprocessing_output_dir, task, plans_identifier + "_plans_3D.pkl")
+        # plans_file = join(preprocessing_output_dir, task, plans_identifier + "_plans_3D.pkl")
+        plans_file = join(preprocessing_output_dir, task, "nnFormerPlansv2.1" + "_plans_3D.pkl")
 
     plans = load_pickle(plans_file)
     # Maybe have two kinds of plans,choose the later one 
